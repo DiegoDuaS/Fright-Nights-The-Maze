@@ -22,6 +22,101 @@ impl Framebuffer {
         }
     }
 
+    pub fn draw_text(&mut self, text: &str, x: usize, y: usize) {
+        let font = vec![
+            // N
+            vec![
+                0b10001,
+                0b11001,
+                0b10101,
+                0b10011,
+                0b10001,
+            ],
+            // I
+            vec![
+                0b11111,
+                0b00100,
+                0b00100,
+                0b00100,
+                0b11111,
+            ],
+            // G
+            vec![
+                0b01110,
+                0b10001,
+                0b10000,
+                0b10011,
+                0b01111,
+            ],
+            // H
+            vec![
+                0b10001,
+                0b11111,
+                0b10001,
+                0b10001,
+                0b10001,
+            ],
+            // T
+            vec![
+                0b11111,
+                0b00100,
+                0b00100,
+                0b00100,
+                0b00100,
+            ],
+            // " "
+            vec![
+                0b00000,
+                0b00000,
+                0b00000,
+                0b00000,
+                0b00000,
+            ],
+            // 1
+            vec![
+                0b00100,
+                0b01100,
+                0b00100,
+                0b00100,
+                0b11111,
+            ]
+        ];
+    
+        let scale = 8;  // Factor de escala para hacer el texto más grande
+        let mut x_offset = x;
+    
+        for character in text.chars() {
+            let idx = match character {
+                'N' => 0,
+                'i' => 1,
+                'g' => 2,
+                'h' => 3,
+                't' => 4,
+                ' ' => 5,
+                '1' => 6,
+                _ => 5, // Espacio en blanco para caracteres no definidos
+            };
+    
+            let pattern = &font[idx];
+    
+            for (i, row) in pattern.iter().enumerate() {
+                for j in 0..5 {  // 5 es el ancho original del carácter
+                    if row & (1 << (4 - j)) != 0 {  // Dibujar solo los bits encendidos
+                        for dy in 0..scale {
+                            for dx in 0..scale {
+                                self.point(x_offset + j * scale + dx, y + i * scale + dy, 0xFFFFFFFF);
+                            }
+                        }
+                    }
+                }
+            }
+    
+            x_offset += 5 * scale + scale;  // Mover la posición de inicio del siguiente carácter
+        }
+    }
+    
+    
+
     pub fn draw_image(&mut self, image_path: &str, window_width: usize, window_height: usize) {
         let img = image::open(image_path).expect("Failed to open image");
 

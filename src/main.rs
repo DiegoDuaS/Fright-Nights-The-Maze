@@ -1,6 +1,7 @@
 use std::io::{self, BufRead, BufReader};
 use minifb::{Key, Window, WindowOptions};
 use std::time::{Duration, Instant};
+use std::thread;
 
 mod framebuffer;
 use framebuffer::Framebuffer;
@@ -31,19 +32,49 @@ fn main() {
 
         if state == "main1"{
             let now = Instant::now();
-            if now.duration_since(last_switch) >= Duration::new(5, 0) {
+            if now.duration_since(last_switch) >= Duration::new(3, 0) {
                 // Alternar pantalla cada 5 segundos
                 current_screen = (current_screen + 1) % 2;  // Alterna entre 0 y 1
                 startpage(&mut framebuffer, current_screen, window_width, window_height);
                 last_switch = now;
             }
             if window.is_key_down(Key::Enter) {
-                state = "main2"
+                state = "night1start";
+                last_switch = now;
             }
         }
 
-        if state == "main2"{
-            beginpage(&mut framebuffer, window_width, window_height);
+        if state == "night1start" {
+            // Mostrar "Night 1" durante 3 segundos
+            framebuffer.clear();
+            framebuffer.draw_text("Night 1", window_width / 2  - 150 , window_height / 2 - 50 );
+            window.update_with_buffer(&framebuffer.buffer, window_width, window_height).unwrap();
+            
+            let now = Instant::now();
+            if now.duration_since(last_switch) >= Duration::new(3, 0) {
+                state = "night1";
+                last_switch = now; // Actualizar el tiempo de referencia
+            }
+        }
+
+        if state == "night1"{
+            framebuffer.clear();
+        }
+
+        if state == "night2start"{
+            continue;
+        }
+
+        if state == "night2"{
+            continue;
+        }
+
+        if state == "night3start"{
+            continue;
+        }
+
+        if state == "night3"{
+            continue;
         }
 
         // Mostrar el contenido del framebuffer en la ventana

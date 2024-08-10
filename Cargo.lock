@@ -639,6 +639,7 @@ dependencies = [
  "minifb",
  "nalgebra",
  "nalgebra-glm",
+ "rand",
 ]
 
 [[package]]
