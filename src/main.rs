@@ -19,8 +19,8 @@ use textures::GameTextures;
 use textures::Texture;
 
 fn main() {
-    let window_width = 1200;
-    let window_height = 700;
+    let window_width = 900;
+    let window_height = 550;
     let mut framebuffer = Framebuffer::new(window_width, window_height);
     let mut state = "main1";
     let asset_dir = "assets/";
@@ -37,6 +37,7 @@ fn main() {
 
     let mut current_screen = 0;
     let mut last_switch = Instant::now();
+    let mut last_frame_time = Instant::now();
 
     // LABERINTO 1
     let maze_result1 = load_maze("./night1.txt");
@@ -81,7 +82,7 @@ fn main() {
 
         if state == "night1start" {
             framebuffer.clear();
-            framebuffer.draw_text("Night 1", window_width / 2 - 150, window_height / 2 - 50);
+            framebuffer.draw_text("Night 1", window_width / 2 - 150, window_height / 2 - 50, 8);
             window.update_with_buffer(&framebuffer.buffer, window_width, window_height).unwrap();
 
             let now = Instant::now();
@@ -95,10 +96,10 @@ fn main() {
             framebuffer.clear();
 
             if window.is_key_down(Key::W) {
-                player1.move_forward(7.0, &maze1, block_size1);
+                player1.move_forward(5.0, &maze1, block_size1);
             }
             if window.is_key_down(Key::S) {
-                player1.move_backward(5.0, &maze1, block_size1);
+                player1.move_backward(3.0, &maze1, block_size1);
             }
             if window.is_key_down(Key::A) {
                 player1.rotate(-0.1);
@@ -108,6 +109,12 @@ fn main() {
             }
 
             render3d(&mut framebuffer, &player1, window_width, window_height, "./night1.txt", &cupcakes1, &textures);
+            let now = Instant::now();
+            let frame_duration = now.duration_since(last_frame_time);
+            let fps = 1.0 / frame_duration.as_secs_f32();
+            last_frame_time = now;
+
+            framebuffer.draw_text(&format!("FPS: {:.0}", fps), 10, 10, 5);
         }
 
         if state == "night2start" {
@@ -127,9 +134,11 @@ fn main() {
         }
 
         window.update_with_buffer(&framebuffer.buffer, window_width, window_height).unwrap();
-        std::thread::sleep(std::time::Duration::from_millis(10));
+        std::thread::sleep(std::time::Duration::from_millis(1));
     }
 }
+
+
 
 fn startpage(framebuffer: &mut Framebuffer, screen: usize, window_width: usize, window_height: usize) {
     framebuffer.clear();
@@ -198,24 +207,16 @@ fn render3d(
     let hh = framebuffer.height as f32 / 2.0;
 
     // Renderizar el techo con gris oscuro
-    for y in 0..hh as usize {
-        for x in 0..framebuffer.width {
-            framebuffer.point(x, y, 0xFF171A1D); // Gris oscuro para el techo
-        }
-    }
+    framebuffer.fill_rect(0, 0, framebuffer.width, hh as usize, 0xFF171A1D);
 
     // Renderizar el suelo con morado más oscuro
-    for y in hh as usize..framebuffer.height {
-        for x in 0..framebuffer.width {
-            framebuffer.point(x, y, 0x2E0854); // Morado más oscuro para el suelo
-        }
-    }
+    framebuffer.fill_rect(0, hh as usize, framebuffer.width, (framebuffer.height - hh as usize), 0x2E0854);
 
     let block_size = window_width.min(window_height) / maze.len().max(1);
-    let num_rays = framebuffer.width;
+    let step = 2; // Lanza un rayo cada 2 píxeles
+    let num_rays = framebuffer.width / step;
 
     let texture = &textures.wall;
-
     let mut z_buffer = vec![f32::INFINITY; framebuffer.width as usize];
 
     for i in 0..num_rays {
@@ -230,7 +231,6 @@ fn render3d(
         let wall_top = hh - wall_height / 2.0;
         let wall_bottom = hh + wall_height / 2.0;
 
-        // Ajuste de textura para el tamaño del bloque
         let texture_width = texture.width as f32;
         let texture_height = texture.height as f32;
 
@@ -240,24 +240,20 @@ fn render3d(
             }
 
             let texture_y = ((y as f32 - wall_top) / wall_height * texture_height) as u32;
-
             let texture_x = (intersect.tx as f32 / block_size as f32 * texture_width) as u32;
 
             let color = texture.get_pixel_color(texture_x, texture_y);
             let color_u32 = rgb_to_u32(color);
 
-            if distance_to_wall < z_buffer[i as usize] {
-                framebuffer.point(i as usize, y, color_u32);
+            if distance_to_wall < z_buffer[i * step as usize] {
+                // Rellenar las columnas intermedias
+                framebuffer.fill_rect(i * step as usize, y, step, 1, color_u32);
             }
         }
 
-        z_buffer[i as usize] = distance_to_wall;
+        z_buffer[i * step as usize] = distance_to_wall;
     }
 }
-
-
-
-
 
 
 fn rgb_to_u32(rgb: Rgb<u8>) -> u32 {

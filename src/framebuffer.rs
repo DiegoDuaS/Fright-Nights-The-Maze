@@ -22,7 +22,7 @@ impl Framebuffer {
         }
     }
 
-    pub fn draw_text(&mut self, text: &str, x: usize, y: usize) {
+    pub fn draw_text(&mut self, text: &str, x: usize, y: usize, fontsize: usize) {
         let font = vec![
             // N
             vec![
@@ -72,6 +72,14 @@ impl Framebuffer {
                 0b00000,
                 0b00000,
             ],
+            // 0
+            vec![
+                0b01110,
+                0b10001,
+                0b10001,
+                0b10001,
+                0b01110,
+            ],
             // 1
             vec![
                 0b00100,
@@ -79,10 +87,107 @@ impl Framebuffer {
                 0b00100,
                 0b00100,
                 0b11111,
-            ]
+            ],
+            // 2
+            vec![
+                0b11111,
+                0b00001,
+                0b11111,
+                0b10000,
+                0b11111,
+            ],
+            // 3
+            vec![
+                0b11111,
+                0b00001,
+                0b01110,
+                0b00001,
+                0b11111,
+            ],
+            // 4
+            vec![
+                0b10001,
+                0b10001,
+                0b11111,
+                0b00001,
+                0b00001,
+            ],
+            // 5
+            vec![
+                0b11111,
+                0b10000,
+                0b11111,
+                0b00001,
+                0b11111,
+            ],
+            // 6
+            vec![
+                0b11111,
+                0b10000,
+                0b11111,
+                0b10001,
+                0b11111,
+            ],
+            // 7
+            vec![
+                0b11111,
+                0b00001,
+                0b00001,
+                0b00001,
+                0b00001,
+            ],
+            // 8
+            vec![
+                0b11111,
+                0b10001,
+                0b11111,
+                0b10001,
+                0b11111,
+            ],
+            // 9
+            vec![
+                0b11111,
+                0b10001,
+                0b11111,
+                0b00001,
+                0b11111,
+            ],
+            // F
+            vec![
+                0b11111,
+                0b10000,
+                0b11110,
+                0b10000,
+                0b10000,
+            ],
+            // P
+            vec![
+                0b11110,
+                0b10001,
+                0b11110,
+                0b10000,
+                0b10000,
+            ],
+            // S
+            vec![
+                0b01111,
+                0b10000,
+                0b01110,
+                0b00001,
+                0b11110,
+            ],
+            // :
+            vec![
+                0b00000,
+                0b00100,
+                0b00000,
+                0b00100,
+                0b00000,
+            ],
         ];
+
     
-        let scale = 8;  // Factor de escala para hacer el texto más grande
+        let scale = fontsize;  // Factor de escala para hacer el texto más grande
         let mut x_offset = x;
     
         for character in text.chars() {
@@ -93,7 +198,20 @@ impl Framebuffer {
                 'h' => 3,
                 't' => 4,
                 ' ' => 5,
-                '1' => 6,
+                '0' => 6,
+                '1' => 7,
+                '2' => 8,
+                '3' => 9,
+                '4' => 10,
+                '5' => 11,
+                '6' => 12,
+                '7' => 13,
+                '8' => 14,
+                '9' => 15,
+                'F' => 16,
+                'P' => 17,
+                'S' => 18,
+                ':' => 19,
                 _ => 5, // Espacio en blanco para caracteres no definidos
             };
     
@@ -174,6 +292,24 @@ impl Framebuffer {
                 let index = y * self.width + x;
                 let flipped_index = ((self.height - 1 - y) * self.width + x);
                 self.buffer[index] = temp_buffer[flipped_index];
+            }
+        }
+    }
+
+    pub fn fill_rect(&mut self, x: usize, y: usize, width: usize, height: usize, color: u32) {
+        for dy in 0..height {
+            let y_offset = y + dy;
+            if y_offset >= self.height {
+                break; // Evitar dibujar fuera de los límites
+            }
+
+            for dx in 0..width {
+                let x_offset = x + dx;
+                if x_offset >= self.width {
+                    break; // Evitar dibujar fuera de los límites
+                }
+
+                self.buffer[y_offset * self.width + x_offset] = color;
             }
         }
     }

@@ -5,7 +5,6 @@ pub struct Intersect {
     pub distance: f32,
     pub impact: char,
     pub tx: usize,
-    pub is_vertical: bool, // Campo para identificar si la pared es vertical
 }
 
 pub fn cast_ray(
@@ -17,39 +16,42 @@ pub fn cast_ray(
     draw_line: bool,
 ) -> Intersect {
     let mut d = 0.0;
-    let step_size = 1.0; // Tamaño del paso del rayo en unidades de píxeles
+    let step_size = 1.0;
 
-    framebuffer.set_current_color(0xFFDDDD); // Color del rayo
+    framebuffer.set_current_color(0xFFDDDD);
+
+    let cos_angle = angle.cos();
+    let sin_angle = angle.sin();
+    let player_x = player.pos.x;
+    let player_y = player.pos.y;
 
     loop {
-        let cos = d * angle.cos();
-        let sin = d * angle.sin();
-        let x = (player.pos.x + cos) as usize;
-        let y = (player.pos.y + sin) as usize;
+        let x = (player_x + d * cos_angle) as usize;
+        let y = (player_y + d * sin_angle) as usize;
 
         let i = x / block_size;
         let j = y / block_size;
 
-        let tx = x - i * block_size;
-        let ty = y - j * block_size;
+        let cell = maze.get(j).and_then(|row| row.get(i));
 
-        let mut maxhit = ty;
+        if let Some(&cell_value) = cell {
+            if cell_value != ' ' {
+                let tx = x - i * block_size;
+                let ty = y - j * block_size;
 
-        if 1 < tx && tx < block_size - 1{
-            maxhit = tx;
-        }
+                let mut maxhit = ty;
+                if 1 < tx && tx < block_size - 1 {
+                    maxhit = tx;
+                }
 
+                let is_vertical = (angle % (std::f32::consts::PI / 2.0)).abs() < 0.01;
 
-        // Identificar si la pared es vertical u horizontal
-        let is_vertical = (angle % (std::f32::consts::PI / 2.0)).abs() < 0.01; // Aproximación para determinar si es vertical
-
-        if maze.get(j).and_then(|row| row.get(i)).map_or(false, |&cell| cell != ' ') {
-            return Intersect {
-                distance: d,
-                impact: maze[j][i],
-                tx: maxhit,
-                is_vertical: is_vertical, // Ajustar según la orientación del ángulo
-            };
+                return Intersect {
+                    distance: d,
+                    impact: cell_value,
+                    tx: maxhit,
+                };
+            }
         }
 
         if draw_line {
