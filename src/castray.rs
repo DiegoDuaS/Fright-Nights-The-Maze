@@ -1,10 +1,11 @@
 use crate::framebuffer::Framebuffer;
 use crate::player::Player;
 
-pub struct Intersect{
+pub struct Intersect {
     pub distance: f32,
     pub impact: char,
     pub tx: usize,
+    pub is_vertical: bool, // Campo para identificar si la pared es vertical
 }
 
 pub fn cast_ray(
@@ -30,12 +31,24 @@ pub fn cast_ray(
         let j = y / block_size;
 
         let tx = x - i * block_size;
+        let ty = y - j * block_size;
+
+        let mut maxhit = ty;
+
+        if 1 < tx && tx < block_size - 1{
+            maxhit = tx;
+        }
+
+
+        // Identificar si la pared es vertical u horizontal
+        let is_vertical = (angle % (std::f32::consts::PI / 2.0)).abs() < 0.01; // Aproximación para determinar si es vertical
 
         if maze.get(j).and_then(|row| row.get(i)).map_or(false, |&cell| cell != ' ') {
             return Intersect {
                 distance: d,
                 impact: maze[j][i],
-                tx: tx,
+                tx: maxhit,
+                is_vertical: is_vertical, // Ajustar según la orientación del ángulo
             };
         }
 
