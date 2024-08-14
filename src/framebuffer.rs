@@ -313,4 +313,13 @@ impl Framebuffer {
             }
         }
     }
+
+    pub fn get_pixel(&self, x: usize, y: usize) -> u32 {
+        if x < self.width && y < self.height {
+            self.buffer[y * self.width + x]
+        } else {
+            // Devuelve un color predeterminado en caso de estar fuera de los límites
+            0x00000000 // Color negro transparente (RGBA: 0, 0, 0, 0)
+        }
+    }
 }

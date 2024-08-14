@@ -12,7 +12,7 @@ mod player;
 use player::Player;
 
 mod castray;
-use castray::cast_ray;
+use castray::{cast_ray, cast_ray_minimap};
 
 mod textures;
 use textures::GameTextures;
@@ -25,6 +25,11 @@ fn main() {
     let mut state = "main1";
     let asset_dir = "assets/";
     let textures = GameTextures::new(asset_dir);
+    let minimap_scale = 0.45;
+    let minimap_width = (framebuffer.width as f32 * minimap_scale) as usize;
+    let minimap_height = (framebuffer.height as f32 * minimap_scale) as usize;
+    let minimap_x = framebuffer.width - minimap_width - 20;
+    let minimap_y = framebuffer.height - minimap_height - 20;
 
     framebuffer.clear();
 
@@ -109,6 +114,7 @@ fn main() {
             }
 
             render3d(&mut framebuffer, &player1, window_width, window_height, "./night1.txt", &cupcakes1, &textures);
+            render_minimap(&mut framebuffer, &player1, &maze1, minimap_x, minimap_y, minimap_scale);
             let now = Instant::now();
             let frame_duration = now.duration_since(last_frame_time);
             let fps = 1.0 / frame_duration.as_secs_f32();
@@ -262,4 +268,56 @@ fn rgb_to_u32(rgb: Rgb<u8>) -> u32 {
     let b = rgb[2] as u32;
     0xFF000000 | (r << 16) | (g << 8) | b
 }
+
+fn draw_cell(framebuffer: &mut Framebuffer, x0: usize, y0: usize, block_size: usize, cell: char) {
+    // Seleccionar un color según la celda
+    let color = match cell {
+        '#' => 0xFFFFFFFF, // Pared (negro)
+        ' ' => 0x2E0854, // Camino (morado)
+        'p' => 0xFF000000 , // Jugador (blanco)
+        'g' => 0xFF00FF00, // Meta (verde)
+        _ => 0xFFFFFFFF,   // Otros (rojo)
+    };
+
+    // Dibujar el rectángulo
+    for y in y0..(y0 + block_size) {
+        for x in x0..(x0 + block_size) {
+            framebuffer.point(x, y, color);
+        }
+    }
+}
+
+fn render_minimap(
+    framebuffer: &mut Framebuffer,
+    player: &Player,
+    maze: &Vec<Vec<char>>,
+    minimap_x: usize,
+    minimap_y: usize,
+    minimap_scale: f32,
+) {
+    let block_size = (100.0 * minimap_scale) as usize;
+
+    for row in 0..maze.len() {
+        for col in 0..maze[row].len() {
+            let cell = maze[row][col];
+            let xo = minimap_x + (col as f32 * block_size as f32 * minimap_scale) as usize;
+            let yo = minimap_y + (row as f32 * block_size as f32 * minimap_scale) as usize;
+            draw_cell(framebuffer, xo, yo, block_size, cell);
+        }
+    }
+
+    let player_x = minimap_x + (player.pos.x * minimap_scale) as usize;
+    let player_y = minimap_y + (player.pos.y * minimap_scale) as usize;
+
+    framebuffer.point(player_x, player_y, 0xFF0000);
+
+    let num_rays = 50;
+    for i in 0..num_rays {
+        let current_ray = i as f32 / num_rays as f32;
+        let angle = player.a - (player.fov / 2.0) + (player.fov * current_ray);
+        cast_ray_minimap(framebuffer, &maze, player, angle, block_size, minimap_x, minimap_y, minimap_scale);
+    }
+}
+
+
 
