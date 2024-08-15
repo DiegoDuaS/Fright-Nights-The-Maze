@@ -8,6 +8,8 @@ use image::{
 pub struct GameTextures {
     pub wall: Texture,
     pub cupcake: Texture,
+    pub start1: Texture,
+    pub start2: Texture
     
 }
 
@@ -15,13 +17,19 @@ impl GameTextures {
     pub fn new(asset_dir: &str) -> Self {
         let wall = format!("{}{}", asset_dir, "wall1.png");
         let cupcake = format!("{}{}", asset_dir, "cupcake.png");
+        let start1 = format!("{}{}", asset_dir, "start1.png");
+        let start2 = format!("{}{}", asset_dir, "start2.png");
 
         let wall = Texture::new(&wall);
         let cupcake = Texture::new(&cupcake);
+        let start1 = Texture::new(&start1);
+        let start2 = Texture::new(&start2);
 
         GameTextures {
             wall,
             cupcake,
+            start1,
+            start2,
             
         }
     }

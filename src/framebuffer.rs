@@ -1,5 +1,7 @@
 use nalgebra::Vector3;
-use image::GenericImageView;
+use image::{DynamicImage, GenericImageView, ImageReader, Rgb};
+
+use crate::{rgb_to_u32, textures::Texture};
 
 pub struct Framebuffer {
     pub width: usize,
@@ -235,23 +237,19 @@ impl Framebuffer {
     
     
 
-    pub fn draw_image(&mut self, image_path: &str, window_width: usize, window_height: usize) {
-        let img = image::open(image_path).expect("Failed to open image");
-
-        // Redimensionar la imagen a las dimensiones de la ventana
-        let resized_img = img.resize(window_width as u32, window_height as u32, image::imageops::FilterType::Lanczos3);
+    pub fn draw_image(&mut self, texture: &Texture, window_width: usize, window_height: usize) {
+        let scale_x = texture.width as f32 / window_width as f32;
+        let scale_y = texture.height as f32 / window_height as f32;
 
         for y in 0..window_height {
             for x in 0..window_width {
-                if x < resized_img.width() as usize && y < resized_img.height() as usize {
-                    let pixel = resized_img.get_pixel(x as u32, y as u32);
-                    let rgba = pixel.0;
+                let texture_x = (x as f32 * scale_x) as u32;
+                let texture_y = (y as f32 * scale_y) as u32;
 
-                    let color = (rgba[0] as u32) << 16  // Red
-                              | (rgba[1] as u32) << 8   // Green
-                              | (rgba[2] as u32)        // Blue
-                              | (rgba[3] as u32) << 24; // Alpha
-                    self.point(x, y, color);
+                if texture_x < texture.width && texture_y < texture.height {
+                    let color = texture.get_pixel_color(texture_x, texture_y);
+                    let color_u32 = rgb_to_u32(color);
+                    self.point(x, y, color_u32);
                 }
             }
         }

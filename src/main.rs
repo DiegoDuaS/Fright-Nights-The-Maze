@@ -25,11 +25,11 @@ fn main() {
     let mut state = "main1";
     let asset_dir = "assets/";
     let textures = GameTextures::new(asset_dir);
-    let minimap_scale = 0.45;
+    let minimap_scale = 0.2;
     let minimap_width = (framebuffer.width as f32 * minimap_scale) as usize;
     let minimap_height = (framebuffer.height as f32 * minimap_scale) as usize;
-    let minimap_x = framebuffer.width - minimap_width - 20;
-    let minimap_y = framebuffer.height - minimap_height - 20;
+    let minimap_x = framebuffer.width - minimap_width - 80;
+    let minimap_y = framebuffer.height - minimap_height - 420;
 
     framebuffer.clear();
 
@@ -76,7 +76,7 @@ fn main() {
             let now = Instant::now();
             if now.duration_since(last_switch) >= Duration::new(3, 0) {
                 current_screen = (current_screen + 1) % 2;
-                startpage(&mut framebuffer, current_screen, window_width, window_height);
+                startpage(&mut framebuffer, current_screen, window_width, window_height, &textures);
                 last_switch = now;
             }
             if window.is_key_down(Key::Enter) {
@@ -113,8 +113,8 @@ fn main() {
                 player1.rotate(0.1);
             }
 
-            render3d(&mut framebuffer, &player1, window_width, window_height, "./night1.txt", &cupcakes1, &textures);
-            render_minimap(&mut framebuffer, &player1, &maze1, minimap_x, minimap_y, minimap_scale);
+            render3d(&mut framebuffer, &player1, window_width, window_height, &maze1, &cupcakes1, &textures);
+            render_minimap(&mut framebuffer, &player1, &maze1, minimap_x, minimap_y, minimap_scale, window_width, window_height);
             let now = Instant::now();
             let frame_duration = now.duration_since(last_frame_time);
             let fps = 1.0 / frame_duration.as_secs_f32();
@@ -146,15 +146,15 @@ fn main() {
 
 
 
-fn startpage(framebuffer: &mut Framebuffer, screen: usize, window_width: usize, window_height: usize) {
+fn startpage(framebuffer: &mut Framebuffer, screen: usize, window_width: usize, window_height: usize,  textures: &GameTextures) {
     framebuffer.clear();
 
     match screen {
         0 => {
-            framebuffer.draw_image("assets/start1.png", window_width, window_height);
+            framebuffer.draw_image(&textures.start1, window_width, window_height);
         }
         1 => {
-            framebuffer.draw_image("assets/start2.png", window_width, window_height);
+            framebuffer.draw_image(&textures.start2, window_width, window_height);
         }
         _ => {}
     }
@@ -196,19 +196,10 @@ fn render3d(
     player: &Player,
     window_width: usize,
     window_height: usize,
-    filename: &str,
+    maze: &Vec<Vec<char>>,  // Cambiado para recibir el laberinto como referencia
     cupcakes: &[(usize, usize)],
     textures: &GameTextures,
 ) {
-    let maze_result = load_maze(filename);
-    let (maze, _player_pos, _cupcakes) = match maze_result {
-        Ok(m) => m,
-        Err(e) => {
-            println!("Error loading maze: {}", e);
-            return;
-        }
-    };
-
     let hw = framebuffer.width as f32 / 2.0;
     let hh = framebuffer.height as f32 / 2.0;
 
@@ -262,6 +253,7 @@ fn render3d(
 }
 
 
+
 fn rgb_to_u32(rgb: Rgb<u8>) -> u32 {
     let r = rgb[0] as u32;
     let g = rgb[1] as u32;
@@ -287,28 +279,21 @@ fn draw_cell(framebuffer: &mut Framebuffer, x0: usize, y0: usize, block_size: us
     }
 }
 
-fn render_minimap(
-    framebuffer: &mut Framebuffer,
-    player: &Player,
-    maze: &Vec<Vec<char>>,
-    minimap_x: usize,
-    minimap_y: usize,
-    minimap_scale: f32,
-) {
-    let block_size = (100.0 * minimap_scale) as usize;
+fn render_minimap(framebuffer: &mut Framebuffer, player: &Player, maze: &Vec<Vec<char>>, minimap_x: usize, minimap_y: usize, minimap_scale: f32,window_width: usize,
+    window_height: usize ) {
+    let block_size = ((window_width.min(window_height) / maze.len().max(1)) as f32 * minimap_scale) as usize;
 
     for row in 0..maze.len() {
         for col in 0..maze[row].len() {
             let cell = maze[row][col];
-            let xo = minimap_x + (col as f32 * block_size as f32 * minimap_scale) as usize;
-            let yo = minimap_y + (row as f32 * block_size as f32 * minimap_scale) as usize;
+            let xo = minimap_x + col * block_size;
+            let yo = minimap_y + row * block_size;
             draw_cell(framebuffer, xo, yo, block_size, cell);
         }
     }
 
-    let player_x = minimap_x + (player.pos.x * minimap_scale) as usize;
-    let player_y = minimap_y + (player.pos.y * minimap_scale) as usize;
-
+    let player_x = minimap_x + (player.pos.x as f32 * minimap_scale) as usize;
+    let player_y = minimap_y + (player.pos.y as f32 * minimap_scale) as usize;
     framebuffer.point(player_x, player_y, 0xFF0000);
 
     let num_rays = 50;
