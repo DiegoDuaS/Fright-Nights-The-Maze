@@ -25,6 +25,7 @@ pub fn cast_ray(
     let player_x = player.pos.x;
     let player_y = player.pos.y;
 
+
     loop {
         let x = (player_x + d * cos_angle) as usize;
         let y = (player_y + d * sin_angle) as usize;
@@ -44,8 +45,6 @@ pub fn cast_ray(
                     maxhit = tx;
                 }
 
-                let is_vertical = (angle % (std::f32::consts::PI / 2.0)).abs() < 0.01;
-
                 return Intersect {
                     distance: d,
                     impact: cell_value,
@@ -61,6 +60,10 @@ pub fn cast_ray(
         d += step_size;
     }
 }
+
+
+
+
 
 pub fn cast_ray_minimap(framebuffer: &mut Framebuffer, maze: &Vec<Vec<char>>, player: &Player, angle: f32, block_size: usize, minimap_x: usize, minimap_y: usize, scale: f32) {
     let mut d = 0.0;

@@ -1,5 +1,3 @@
-use std::fs::File;
-use std::io::{self, BufRead, BufReader};
 use image::Rgb;
 use minifb::{Key, Window, WindowOptions};
 use std::time::{Duration, Instant};
@@ -16,7 +14,13 @@ use castray::{cast_ray, cast_ray_minimap};
 
 mod textures;
 use textures::GameTextures;
-use textures::Texture;
+
+mod fileloader;
+use fileloader::load_maze;
+
+mod render;
+use render::{render3d,render_minimap};
+
 
 fn main() {
     let window_width = 900;
@@ -43,10 +47,16 @@ fn main() {
     let mut current_screen = 0;
     let mut last_switch = Instant::now();
     let mut last_frame_time = Instant::now();
+    let mut start_time1 = Instant::now(); 
+    let mut start_time2 = Instant::now(); 
+    let mut start_time3 = Instant::now(); 
+    let night1_duration = Duration::new(20, 0);
+    let night2_duration = Duration::new(20, 0); 
+    let night3_duration = Duration::new(15, 0);
 
     // LABERINTO 1
     let maze_result1 = load_maze("./night1.txt");
-    let (maze1, player_pos1, cupcakes1) = match maze_result1 {
+    let (maze1, player_pos1, goal1) = match maze_result1 {
         Ok(m) => m,
         Err(e) => {
             println!("Error loading maze: {}", e);
@@ -65,7 +75,54 @@ fn main() {
         fov: std::f32::consts::PI / 3.0,
     };
 
-    let block_size1: usize = window_width.min(window_height) / maze1.len().max(1);
+    // LABERINTO 2
+    let maze_result2 = load_maze("./night2.txt");
+    let (maze2, player_pos2, goal2) = match maze_result2 {
+        Ok(m) => m,
+        Err(e) => {
+            println!("Error loading maze: {}", e);
+            return;
+        }
+    };
+
+    let initial_pos2 = match player_pos2 {
+        Some((row, col)) => Vec2::new((col * 100) as f32, (row * 100) as f32),
+        None => Vec2::new(100.0, 100.0),
+    };
+
+    let mut player2 = Player {
+        pos: initial_pos2,
+        a: 0.0,
+        fov: std::f32::consts::PI / 3.0,
+    };
+
+    // LABERINTO 3
+    let maze_result3 = load_maze("./night3.txt");
+    let (maze3, player_pos3, goal3) = match maze_result3 {
+        Ok(m) => m,
+        Err(e) => {
+            println!("Error loading maze: {}", e);
+            return;
+        }
+    };
+
+    let initial_pos3 = match player_pos3 {
+        Some((row, col)) => Vec2::new((col * 100) as f32, (row * 100) as f32),
+        None => Vec2::new(100.0, 100.0),
+    };
+
+    let mut player3 = Player {
+        pos: initial_pos3,
+        a: 0.0,
+        fov: std::f32::consts::PI / 3.0,
+    };
+
+
+    let block_size: usize = window_width.min(window_height) / maze1.len().max(1);
+
+    let mut frame_index = 0;
+    let frame_duration = Duration::from_millis(100); // Adjust frame duration
+    let mut last_frame_update = Instant::now();
 
     while window.is_open() {
         if window.is_key_down(Key::Escape) {
@@ -82,18 +139,21 @@ fn main() {
             if window.is_key_down(Key::Enter) {
                 state = "night1start";
                 last_switch = now;
+                start_time1 = Instant::now(); 
             }
         }
 
         if state == "night1start" {
             framebuffer.clear();
-            framebuffer.draw_text("Night 1", window_width / 2 - 150, window_height / 2 - 50, 8);
+            framebuffer.draw_text("NIGHT 1", window_width / 2 - 150, window_height / 2 - 50, 8);
             window.update_with_buffer(&framebuffer.buffer, window_width, window_height).unwrap();
+            player1.pos = initial_pos1;
 
             let now = Instant::now();
             if now.duration_since(last_switch) >= Duration::new(3, 0) {
                 state = "night1";
                 last_switch = now;
+                start_time1 = Instant::now(); 
             }
         }
 
@@ -101,10 +161,10 @@ fn main() {
             framebuffer.clear();
 
             if window.is_key_down(Key::W) {
-                player1.move_forward(5.0, &maze1, block_size1);
+                player1.move_forward(5.0, &maze1, block_size);
             }
             if window.is_key_down(Key::S) {
-                player1.move_backward(3.0, &maze1, block_size1);
+                player1.move_backward(3.0, &maze1, block_size);
             }
             if window.is_key_down(Key::A) {
                 player1.rotate(-0.1);
@@ -113,7 +173,7 @@ fn main() {
                 player1.rotate(0.1);
             }
 
-            render3d(&mut framebuffer, &player1, window_width, window_height, &maze1, &cupcakes1, &textures);
+            render3d(&mut framebuffer, &player1, window_width, window_height, &maze1, &textures);
             render_minimap(&mut framebuffer, &player1, &maze1, minimap_x, minimap_y, minimap_scale, window_width, window_height);
             let now = Instant::now();
             let frame_duration = now.duration_since(last_frame_time);
@@ -121,14 +181,149 @@ fn main() {
             last_frame_time = now;
 
             framebuffer.draw_text(&format!("FPS: {:.0}", fps), 10, 10, 5);
+
+            let player_col = (player1.pos.x / block_size as f32) as usize;
+            let player_row = (player1.pos.y / block_size as f32) as usize;
+
+            let goal_col = goal1[0].1;
+            let goal_row = goal1[0].0;
+
+            let dist_x = (goal_col as f32 - player_col as f32).powi(2);
+            let dist_y = (goal_row as f32 - player_row as f32).powi(2);
+            let distance = (dist_x + dist_y).sqrt();
+
+            let threshold = 2.0;
+
+            if distance <= threshold {
+                state = "night1clear";
+                last_switch = now;
+            }
+
+            if now.duration_since(start_time1) >= night1_duration {
+                state = "night1lose";
+                last_switch = now;
+            }
         }
 
+        if state == "night1clear" {
+            framebuffer.clear();
+            framebuffer.draw_text("I WAS THE FIRST", window_width / 2 - 150, window_height / 2 - 50, 4);
+            framebuffer.draw_text("I HAVE SEEN EVERYTHING", window_width / 2 - 120, window_height / 2 - 15, 4);
+            window.update_with_buffer(&framebuffer.buffer, window_width, window_height).unwrap();
+
+            let now = Instant::now();
+            if now.duration_since(last_switch) >= Duration::new(6, 0) {
+                state = "night2start";
+                last_switch = now;
+            }
+        }
+
+        if state == "night1lose" {
+            let now = Instant::now();
+            if now.duration_since(last_frame_update) >= frame_duration {
+                frame_index = (frame_index + 1) % &textures.chicaloss.frame_count;
+                last_frame_update = now;
+            }
+
+            framebuffer.clear();
+            framebuffer.draw_text("GAME OVER", window_width / 2 - 150, window_height / 2 + 200, 5);
+            framebuffer.draw_text("PRESS R TO RESTART OR Q TO QUIT", window_width / 2 - 250, window_height / 2 + 240, 3);
+        
+            framebuffer.draw_animated_image(&textures.chicaloss, frame_index, window_width, window_height - 100);
+
+            window.update_with_buffer(&framebuffer.buffer, window_width, window_height).unwrap();
+        
+            if window.is_key_down(Key::R) {
+                state = "night1start";
+                start_time1 = Instant::now(); 
+            } else if window.is_key_down(Key::Q) {
+                state = "main1"; 
+            }
+        }
+
+
         if state == "night2start" {
-            continue;
+            framebuffer.clear();
+            framebuffer.draw_text("NIGHT 2", window_width / 2 - 150, window_height / 2 - 50, 8);
+            window.update_with_buffer(&framebuffer.buffer, window_width, window_height).unwrap();
+
+            let now = Instant::now();
+            if now.duration_since(last_switch) >= Duration::new(3, 0) {
+                state = "night2";
+                last_switch = now;
+                start_time2 = Instant::now(); 
+            }
         }
 
         if state == "night2" {
-            // Lógica para la segunda noche
+            framebuffer.clear();
+
+            if window.is_key_down(Key::W) {
+                player2.move_forward(5.0, &maze2, block_size);
+            }
+            if window.is_key_down(Key::S) {
+                player2.move_backward(3.0, &maze2, block_size);
+            }
+            if window.is_key_down(Key::A) {
+                player2.rotate(-0.1);
+            }
+            if window.is_key_down(Key::D) {
+                player2.rotate(0.1);
+            }
+
+            render3d(&mut framebuffer, &player2, window_width, window_height, &maze2, &textures);
+            render_minimap(&mut framebuffer, &player2, &maze2, minimap_x, minimap_y, minimap_scale, window_width, window_height);
+            let now = Instant::now();
+            let frame_duration = now.duration_since(last_frame_time);
+            let fps = 1.0 / frame_duration.as_secs_f32();
+            last_frame_time = now;
+
+            framebuffer.draw_text(&format!("FPS: {:.0}", fps), 10, 10, 5);
+
+            let player_col = (player2.pos.x / block_size as f32) as usize;
+            let player_row = (player2.pos.y / block_size as f32) as usize;
+
+            let goal_col = goal2[0].1;
+            let goal_row = goal2[0].0;
+
+            let dist_x = (goal_col as f32 - player_col as f32).powi(2);
+            let dist_y = (goal_row as f32 - player_row as f32).powi(2);
+            let distance = (dist_x + dist_y).sqrt();
+
+            let threshold = 2.0;
+
+            if distance <= threshold {
+                state = "night2clear";
+                last_switch = now;
+            }
+
+            if now.duration_since(start_time2) >= night2_duration {
+                state = "night2lose";
+                last_switch = now;
+            }
+        }
+
+        if state == "night2lose" {
+            let now = Instant::now();
+            if now.duration_since(last_frame_update) >= frame_duration {
+                frame_index = (frame_index + 1) % &textures.chicaloss.frame_count;
+                last_frame_update = now;
+            }
+
+            framebuffer.clear();
+            framebuffer.draw_text("GAME OVER", window_width / 2 - 150, window_height / 2 + 200, 5);
+            framebuffer.draw_text("PRESS R TO RESTART OR Q TO QUIT", window_width / 2 - 250, window_height / 2 + 240, 3);
+        
+            framebuffer.draw_animated_image(&textures.chicaloss, frame_index, window_width, window_height - 100);
+
+            window.update_with_buffer(&framebuffer.buffer, window_width, window_height).unwrap();
+        
+            if window.is_key_down(Key::R) {
+                state = "night2start";
+                start_time2 = Instant::now(); 
+            } else if window.is_key_down(Key::Q) {
+                state = "main1"; 
+            }
         }
 
         if state == "night3start" {
@@ -146,6 +341,7 @@ fn main() {
 
 
 
+
 fn startpage(framebuffer: &mut Framebuffer, screen: usize, window_width: usize, window_height: usize,  textures: &GameTextures) {
     framebuffer.clear();
 
@@ -160,100 +356,6 @@ fn startpage(framebuffer: &mut Framebuffer, screen: usize, window_width: usize, 
     }
 }
 
-pub fn load_maze(filename: &str) -> Result<(Vec<Vec<char>>, Option<(usize, usize)>, Vec<(usize, usize)>), io::Error> {
-    let file = File::open(filename)?;
-    let reader = BufReader::new(file);
-
-    let mut maze = Vec::new();
-    let mut player_pos = None;
-    let mut cupcakes = Vec::new();
-
-    for (row_index, line) in reader.lines().enumerate() {
-        let line = line?;
-        let mut row = Vec::new();
-        for (col_index, c) in line.chars().enumerate() {
-            match c {
-                'p' => {
-                    player_pos = Some((row_index, col_index));
-                    row.push(' '); // Reemplazar el carácter del jugador con un espacio para el renderizado
-                }
-                'C' => {
-                    cupcakes.push((row_index, col_index));
-                    row.push(' '); // Reemplazar el carácter del cupcake con un espacio para el renderizado
-                }
-                _ => row.push(c),
-            }
-        }
-        maze.push(row);
-    }
-
-    Ok((maze, player_pos, cupcakes))
-}
-
-
-fn render3d(
-    framebuffer: &mut Framebuffer,
-    player: &Player,
-    window_width: usize,
-    window_height: usize,
-    maze: &Vec<Vec<char>>,  // Cambiado para recibir el laberinto como referencia
-    cupcakes: &[(usize, usize)],
-    textures: &GameTextures,
-) {
-    let hw = framebuffer.width as f32 / 2.0;
-    let hh = framebuffer.height as f32 / 2.0;
-
-    // Renderizar el techo con gris oscuro
-    framebuffer.fill_rect(0, 0, framebuffer.width, hh as usize, 0xFF171A1D);
-
-    // Renderizar el suelo con morado más oscuro
-    framebuffer.fill_rect(0, hh as usize, framebuffer.width, (framebuffer.height - hh as usize), 0x2E0854);
-
-    let block_size = window_width.min(window_height) / maze.len().max(1);
-    let step = 2; // Lanza un rayo cada 2 píxeles
-    let num_rays = framebuffer.width / step;
-
-    let texture = &textures.wall;
-    let mut z_buffer = vec![f32::INFINITY; framebuffer.width as usize];
-
-    for i in 0..num_rays {
-        let current_ray = i as f32 / num_rays as f32;
-        let a = player.a - (player.fov / 2.0) + (player.fov * current_ray);
-        let intersect = cast_ray(framebuffer, &maze, player, a, block_size, false);
-
-        let distance_to_wall = intersect.distance;
-        let distance_to_projection_plane = hw / (player.fov / 2.0).tan();
-        let wall_height = (block_size as f32 / distance_to_wall) * distance_to_projection_plane;
-
-        let wall_top = hh - wall_height / 2.0;
-        let wall_bottom = hh + wall_height / 2.0;
-
-        let texture_width = texture.width as f32;
-        let texture_height = texture.height as f32;
-
-        for y in wall_top as usize..wall_bottom as usize {
-            if y >= framebuffer.height {
-                continue;
-            }
-
-            let texture_y = ((y as f32 - wall_top) / wall_height * texture_height) as u32;
-            let texture_x = (intersect.tx as f32 / block_size as f32 * texture_width) as u32;
-
-            let color = texture.get_pixel_color(texture_x, texture_y);
-            let color_u32 = rgb_to_u32(color);
-
-            if distance_to_wall < z_buffer[i * step as usize] {
-                // Rellenar las columnas intermedias
-                framebuffer.fill_rect(i * step as usize, y, step, 1, color_u32);
-            }
-        }
-
-        z_buffer[i * step as usize] = distance_to_wall;
-    }
-}
-
-
-
 fn rgb_to_u32(rgb: Rgb<u8>) -> u32 {
     let r = rgb[0] as u32;
     let g = rgb[1] as u32;
@@ -261,48 +363,6 @@ fn rgb_to_u32(rgb: Rgb<u8>) -> u32 {
     0xFF000000 | (r << 16) | (g << 8) | b
 }
 
-fn draw_cell(framebuffer: &mut Framebuffer, x0: usize, y0: usize, block_size: usize, cell: char) {
-    // Seleccionar un color según la celda
-    let color = match cell {
-        '#' => 0xFFFFFFFF, // Pared (negro)
-        ' ' => 0x2E0854, // Camino (morado)
-        'p' => 0xFF000000 , // Jugador (blanco)
-        'g' => 0xFF00FF00, // Meta (verde)
-        _ => 0xFFFFFFFF,   // Otros (rojo)
-    };
-
-    // Dibujar el rectángulo
-    for y in y0..(y0 + block_size) {
-        for x in x0..(x0 + block_size) {
-            framebuffer.point(x, y, color);
-        }
-    }
-}
-
-fn render_minimap(framebuffer: &mut Framebuffer, player: &Player, maze: &Vec<Vec<char>>, minimap_x: usize, minimap_y: usize, minimap_scale: f32,window_width: usize,
-    window_height: usize ) {
-    let block_size = ((window_width.min(window_height) / maze.len().max(1)) as f32 * minimap_scale) as usize;
-
-    for row in 0..maze.len() {
-        for col in 0..maze[row].len() {
-            let cell = maze[row][col];
-            let xo = minimap_x + col * block_size;
-            let yo = minimap_y + row * block_size;
-            draw_cell(framebuffer, xo, yo, block_size, cell);
-        }
-    }
-
-    let player_x = minimap_x + (player.pos.x as f32 * minimap_scale) as usize;
-    let player_y = minimap_y + (player.pos.y as f32 * minimap_scale) as usize;
-    framebuffer.point(player_x, player_y, 0xFF0000);
-
-    let num_rays = 50;
-    for i in 0..num_rays {
-        let current_ray = i as f32 / num_rays as f32;
-        let angle = player.a - (player.fov / 2.0) + (player.fov * current_ray);
-        cast_ray_minimap(framebuffer, &maze, player, angle, block_size, minimap_x, minimap_y, minimap_scale);
-    }
-}
 
 
 

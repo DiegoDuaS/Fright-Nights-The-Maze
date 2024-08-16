@@ -1,7 +1,7 @@
 use nalgebra::Vector3;
 use image::{DynamicImage, GenericImageView, ImageReader, Rgb};
 
-use crate::{rgb_to_u32, textures::Texture};
+use crate::{rgb_to_u32, textures::{AnimatedTexture, Texture}};
 
 pub struct Framebuffer {
     pub width: usize,
@@ -25,167 +25,45 @@ impl Framebuffer {
     }
 
     pub fn draw_text(&mut self, text: &str, x: usize, y: usize, fontsize: usize) {
-        let font = vec![
-            // N
-            vec![
-                0b10001,
-                0b11001,
-                0b10101,
-                0b10011,
-                0b10001,
-            ],
-            // I
-            vec![
-                0b11111,
-                0b00100,
-                0b00100,
-                0b00100,
-                0b11111,
-            ],
-            // G
-            vec![
-                0b01110,
-                0b10001,
-                0b10000,
-                0b10011,
-                0b01111,
-            ],
-            // H
-            vec![
-                0b10001,
-                0b11111,
-                0b10001,
-                0b10001,
-                0b10001,
-            ],
-            // T
-            vec![
-                0b11111,
-                0b00100,
-                0b00100,
-                0b00100,
-                0b00100,
-            ],
-            // " "
-            vec![
-                0b00000,
-                0b00000,
-                0b00000,
-                0b00000,
-                0b00000,
-            ],
-            // 0
-            vec![
-                0b01110,
-                0b10001,
-                0b10001,
-                0b10001,
-                0b01110,
-            ],
-            // 1
-            vec![
-                0b00100,
-                0b01100,
-                0b00100,
-                0b00100,
-                0b11111,
-            ],
-            // 2
-            vec![
-                0b11111,
-                0b00001,
-                0b11111,
-                0b10000,
-                0b11111,
-            ],
-            // 3
-            vec![
-                0b11111,
-                0b00001,
-                0b01110,
-                0b00001,
-                0b11111,
-            ],
-            // 4
-            vec![
-                0b10001,
-                0b10001,
-                0b11111,
-                0b00001,
-                0b00001,
-            ],
-            // 5
-            vec![
-                0b11111,
-                0b10000,
-                0b11111,
-                0b00001,
-                0b11111,
-            ],
-            // 6
-            vec![
-                0b11111,
-                0b10000,
-                0b11111,
-                0b10001,
-                0b11111,
-            ],
-            // 7
-            vec![
-                0b11111,
-                0b00001,
-                0b00001,
-                0b00001,
-                0b00001,
-            ],
-            // 8
-            vec![
-                0b11111,
-                0b10001,
-                0b11111,
-                0b10001,
-                0b11111,
-            ],
-            // 9
-            vec![
-                0b11111,
-                0b10001,
-                0b11111,
-                0b00001,
-                0b11111,
-            ],
-            // F
-            vec![
-                0b11111,
-                0b10000,
-                0b11110,
-                0b10000,
-                0b10000,
-            ],
-            // P
-            vec![
-                0b11110,
-                0b10001,
-                0b11110,
-                0b10000,
-                0b10000,
-            ],
-            // S
-            vec![
-                0b01111,
-                0b10000,
-                0b01110,
-                0b00001,
-                0b11110,
-            ],
-            // :
-            vec![
-                0b00000,
-                0b00100,
-                0b00000,
-                0b00100,
-                0b00000,
-            ],
+        let font = [
+        vec![0b01110, 0b10001, 0b11111, 0b10001, 0b10001], // A
+        vec![0b11110, 0b10001, 0b11110, 0b10001, 0b11110], // B
+        vec![0b01111, 0b10000, 0b10000, 0b10000, 0b01111], // C
+        vec![0b11110, 0b10001, 0b10001, 0b10001, 0b11110], // D
+        vec![0b11111, 0b10000, 0b11110, 0b10000, 0b11111], // E
+        vec![0b11111, 0b10000, 0b11110, 0b10000, 0b10000], // F
+        vec![0b01111, 0b10000, 0b10011, 0b10001, 0b01110], // G
+        vec![0b10001, 0b10001, 0b11111, 0b10001, 0b10001], // H
+        vec![0b11111, 0b00100, 0b00100, 0b00100, 0b11111], // I
+        vec![0b00001, 0b00001, 0b00001, 0b10001, 0b01110], // J
+        vec![0b10001, 0b10010, 0b11100, 0b10010, 0b10001], // K
+        vec![0b10000, 0b10000, 0b10000, 0b10000, 0b11111], // L
+        vec![0b10001, 0b11011, 0b10101, 0b10001, 0b10001], // M
+        vec![0b10001, 0b11001, 0b10101, 0b10011, 0b10001], // N
+        vec![0b01110, 0b10001, 0b10001, 0b10001, 0b01110], // O
+        vec![0b11110, 0b10001, 0b11110, 0b10000, 0b10000], // P
+        vec![0b01110, 0b10001, 0b10001, 0b10011, 0b01111], // Q
+        vec![0b11110, 0b10001, 0b11110, 0b10010, 0b10001], // R
+        vec![0b01111, 0b10000, 0b01110, 0b00001, 0b11110], // S
+        vec![0b11111, 0b00100, 0b00100, 0b00100, 0b00100], // T
+        vec![0b10001, 0b10001, 0b10001, 0b10001, 0b01110], // U
+        vec![0b10001, 0b10001, 0b10001, 0b01010, 0b00100], // V
+        vec![0b10001, 0b10001, 0b10001, 0b10101, 0b01010], // W
+        vec![0b10001, 0b01010, 0b00100, 0b01010, 0b10001], // X
+        vec![0b10001, 0b01010, 0b00100, 0b00100, 0b00100], // Y
+        vec![0b11111, 0b00001, 0b01111, 0b10000, 0b11111], // Z
+        vec![0b01110, 0b10001, 0b10001, 0b10001, 0b01110], // 0
+        vec![0b00100, 0b01100, 0b00100, 0b00100, 0b11111], // 1
+        vec![0b11111, 0b00001, 0b11111, 0b10000, 0b11111], // 2
+        vec![0b11111, 0b00001, 0b01110, 0b00001, 0b11111], // 3
+        vec![0b10001, 0b10001, 0b11111, 0b00001, 0b00001], // 4
+        vec![0b11111, 0b10000, 0b11111, 0b00001, 0b11111], // 5
+        vec![0b11111, 0b10000, 0b11111, 0b10001, 0b11111], // 6
+        vec![0b11111, 0b00001, 0b00001, 0b00001, 0b00001], // 7
+        vec![0b11111, 0b10001, 0b11111, 0b10001, 0b11111], // 8
+        vec![0b11111, 0b10001, 0b11111, 0b00001, 0b11111], // 9
+        vec![0b00000, 0b00100, 0b00000, 0b00100, 0b00000], // :
+        vec![0b00000, 0b00000, 0b00000, 0b00000, 0b00000], // Espacio
         ];
 
     
@@ -194,27 +72,11 @@ impl Framebuffer {
     
         for character in text.chars() {
             let idx = match character {
-                'N' => 0,
-                'i' => 1,
-                'g' => 2,
-                'h' => 3,
-                't' => 4,
-                ' ' => 5,
-                '0' => 6,
-                '1' => 7,
-                '2' => 8,
-                '3' => 9,
-                '4' => 10,
-                '5' => 11,
-                '6' => 12,
-                '7' => 13,
-                '8' => 14,
-                '9' => 15,
-                'F' => 16,
-                'P' => 17,
-                'S' => 18,
-                ':' => 19,
-                _ => 5, // Espacio en blanco para caracteres no definidos
+                'A'..='Z' => (character as usize) - ('A' as usize),
+                '0'..='9' => (character as usize) - ('0' as usize) + 26,
+                ':' => 36,
+                ' ' => 37,
+                _ => 37, // Espacio en blanco para caracteres no definidos
             };
     
             let pattern = &font[idx];
@@ -320,4 +182,26 @@ impl Framebuffer {
             0x00000000 // Color negro transparente (RGBA: 0, 0, 0, 0)
         }
     }
+
+    pub fn draw_animated_image(&mut self, animated_texture: &AnimatedTexture, frame_index: usize, window_width: usize, window_height: usize) {
+        // Ensure frame_index is within the bounds
+        let frame_index = frame_index % animated_texture.frame_count;
+    
+        let scale_x = animated_texture.width as f32 / window_width as f32;
+        let scale_y = animated_texture.height as f32 / window_height as f32;
+    
+        for y in 0..window_height {
+            for x in 0..window_width {
+                let texture_x = (x as f32 * scale_x) as u32;
+                let texture_y = (y as f32 * scale_y) as u32;
+    
+                if texture_x < animated_texture.width && texture_y < animated_texture.height {
+                    let color = animated_texture.get_pixel_color(frame_index, texture_x, texture_y);
+                    let color_u32 = rgb_to_u32(color);
+                    self.point(x, y, color_u32);
+                }
+            }
+        }
+    }
+    
 }
