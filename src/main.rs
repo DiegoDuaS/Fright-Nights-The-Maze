@@ -60,22 +60,20 @@ fn main() {
     let night3_duration = Duration::new(15, 0);
     let audio_player_main = AudioPlayer::new("sound/mainmenu.mp3");
     let audio_player_ambience = AudioPlayer::new("sound/ambience.mp3");
-    let audio_player_jumpscare1 = AudioPlayer::new("sound/jumpscare.mp3");
-    let audio_player_win1 = AudioPlayer::new("sound/win.mp3");
-    let audio_player_jumpscare2 = AudioPlayer::new("sound/jumpscare.mp3");
-    let audio_player_win2 = AudioPlayer::new("sound/win.mp3");
-    let audio_player_jumpscare3 = AudioPlayer::new("sound/jumpscare.mp3");
-    let audio_player_win3 = AudioPlayer::new("sound/win.mp3");
-
     audio_player_ambience.stop();
+    let audio_player_jumpscare1 = AudioPlayer::new("sound/jumpscare.mp3");
     audio_player_jumpscare1.stop();
+    let audio_player_win1 = AudioPlayer::new("sound/win.mp3");
     audio_player_win1.stop();
+    let audio_player_jumpscare2 = AudioPlayer::new("sound/jumpscare.mp3");
     audio_player_jumpscare2.stop();
+    let audio_player_win2 = AudioPlayer::new("sound/win.mp3");
     audio_player_win2.stop();
+    let audio_player_jumpscare3 = AudioPlayer::new("sound/jumpscare.mp3");
     audio_player_jumpscare3.stop();
+    let audio_player_win3 = AudioPlayer::new("sound/win.mp3");
     audio_player_win3.stop();
     
-
     // LABERINTO 1
     let maze_result1 = load_maze("./night1.txt");
     let (maze1, player_pos1, goal1) = match maze_result1 {
