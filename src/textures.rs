@@ -7,33 +7,46 @@ use image::{
 
 pub struct GameTextures {
     pub wall: Texture,
+    pub cupcake: Texture,
     pub start1: Texture,
     pub start2: Texture,
     pub exitwall: Texture,
-    pub chicaloss: AnimatedTexture
+    pub chicaloss: AnimatedTexture,
+    pub bonnieloss: AnimatedTexture,
+    pub freddyloss: AnimatedTexture
     
 }
 
+//AGREGAR BONNIE Y FREDDY
 impl GameTextures {
     pub fn new(asset_dir: &str) -> Self {
         let wall = format!("{}{}", asset_dir, "wall1.png");
+        let cupcake = format!("{}{}", asset_dir, "cupcake.png");
         let start1 = format!("{}{}", asset_dir, "start1.png");
         let start2 = format!("{}{}", asset_dir, "start2.png");
         let exitwall = format!("{}{}", asset_dir, "exit1.png");
         let chicaloss = format!("{}{}", asset_dir, "chica.gif");
+        let bonnieloss = format!("{}{}", asset_dir, "bonnie.gif");
+        let freddyloss = format!("{}{}", asset_dir, "freddy.gif");
 
         let wall = Texture::new(&wall);
         let start1 = Texture::new(&start1);
+        let cupcake = Texture::new(&cupcake);
         let start2 = Texture::new(&start2);
         let exitwall = Texture::new(&exitwall);
         let chicaloss = AnimatedTexture::new(&chicaloss);
+        let bonnieloss = AnimatedTexture::new(&bonnieloss);
+        let freddyloss = AnimatedTexture::new(&freddyloss);
 
         GameTextures {
             wall,
+            cupcake,
             start1,
             start2,
             exitwall,
             chicaloss,
+            bonnieloss,
+            freddyloss,
         }
     }
 }

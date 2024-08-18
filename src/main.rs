@@ -10,7 +10,6 @@ mod player;
 use player::Player;
 
 mod castray;
-use castray::{cast_ray, cast_ray_minimap};
 
 mod textures;
 use textures::GameTextures;
@@ -20,6 +19,11 @@ use fileloader::load_maze;
 
 mod render;
 use render::{render3d,render_minimap};
+
+mod process_event;
+use process_event::process_event;
+
+mod audioplayer;
 
 
 fn main() {
@@ -140,6 +144,7 @@ fn main() {
                 state = "night1start";
                 last_switch = now;
                 start_time1 = Instant::now(); 
+
             }
         }
 
@@ -160,18 +165,7 @@ fn main() {
         if state == "night1" {
             framebuffer.clear();
 
-            if window.is_key_down(Key::W) {
-                player1.move_forward(5.0, &maze1, block_size);
-            }
-            if window.is_key_down(Key::S) {
-                player1.move_backward(3.0, &maze1, block_size);
-            }
-            if window.is_key_down(Key::A) {
-                player1.rotate(-0.1);
-            }
-            if window.is_key_down(Key::D) {
-                player1.rotate(0.1);
-            }
+            process_event(&mut player1,&window,&maze1,block_size);
 
             render3d(&mut framebuffer, &player1, window_width, window_height, &maze1, &textures);
             render_minimap(&mut framebuffer, &player1, &maze1, minimap_x, minimap_y, minimap_scale, window_width, window_height);
@@ -182,15 +176,7 @@ fn main() {
 
             framebuffer.draw_text(&format!("FPS: {:.0}", fps), 10, 10, 5);
 
-            let player_col = (player1.pos.x / block_size as f32) as usize;
-            let player_row = (player1.pos.y / block_size as f32) as usize;
-
-            let goal_col = goal1[0].1;
-            let goal_row = goal1[0].0;
-
-            let dist_x = (goal_col as f32 - player_col as f32).powi(2);
-            let dist_y = (goal_row as f32 - player_row as f32).powi(2);
-            let distance = (dist_x + dist_y).sqrt();
+            let distance = calc_distance(&player1, block_size, &goal1);
 
             let threshold = 2.0;
 
@@ -207,8 +193,8 @@ fn main() {
 
         if state == "night1clear" {
             framebuffer.clear();
-            framebuffer.draw_text("I WAS THE FIRST", window_width / 2 - 150, window_height / 2 - 50, 4);
-            framebuffer.draw_text("I HAVE SEEN EVERYTHING", window_width / 2 - 120, window_height / 2 - 15, 4);
+            framebuffer.draw_text("I WAS THE FIRST", window_width / 2 - 250, window_height / 2 - 50, 4);
+            framebuffer.draw_text("I HAVE SEEN EVERYTHING", window_width / 2 - 220, window_height / 2 - 15, 4);
             window.update_with_buffer(&framebuffer.buffer, window_width, window_height).unwrap();
 
             let now = Instant::now();
@@ -246,6 +232,7 @@ fn main() {
             framebuffer.clear();
             framebuffer.draw_text("NIGHT 2", window_width / 2 - 150, window_height / 2 - 50, 8);
             window.update_with_buffer(&framebuffer.buffer, window_width, window_height).unwrap();
+            player2.pos = initial_pos2;
 
             let now = Instant::now();
             if now.duration_since(last_switch) >= Duration::new(3, 0) {
@@ -258,18 +245,7 @@ fn main() {
         if state == "night2" {
             framebuffer.clear();
 
-            if window.is_key_down(Key::W) {
-                player2.move_forward(5.0, &maze2, block_size);
-            }
-            if window.is_key_down(Key::S) {
-                player2.move_backward(3.0, &maze2, block_size);
-            }
-            if window.is_key_down(Key::A) {
-                player2.rotate(-0.1);
-            }
-            if window.is_key_down(Key::D) {
-                player2.rotate(0.1);
-            }
+            process_event(&mut player2,&window,&maze2,block_size);
 
             render3d(&mut framebuffer, &player2, window_width, window_height, &maze2, &textures);
             render_minimap(&mut framebuffer, &player2, &maze2, minimap_x, minimap_y, minimap_scale, window_width, window_height);
@@ -280,15 +256,7 @@ fn main() {
 
             framebuffer.draw_text(&format!("FPS: {:.0}", fps), 10, 10, 5);
 
-            let player_col = (player2.pos.x / block_size as f32) as usize;
-            let player_row = (player2.pos.y / block_size as f32) as usize;
-
-            let goal_col = goal2[0].1;
-            let goal_row = goal2[0].0;
-
-            let dist_x = (goal_col as f32 - player_col as f32).powi(2);
-            let dist_y = (goal_row as f32 - player_row as f32).powi(2);
-            let distance = (dist_x + dist_y).sqrt();
+            let distance = calc_distance(&player2, block_size, &goal1);
 
             let threshold = 2.0;
 
@@ -303,6 +271,20 @@ fn main() {
             }
         }
 
+        if state == "night2clear" {
+            framebuffer.clear();
+            framebuffer.draw_text("IS TIME TO FACE THE", window_width / 2 - 300, window_height / 2 - 50, 4);
+            framebuffer.draw_text("CONSECUENCES OF YOUR FAILURE", window_width / 2 - 270, window_height / 2 - 15, 4);
+            window.update_with_buffer(&framebuffer.buffer, window_width, window_height).unwrap();
+
+            let now = Instant::now();
+            if now.duration_since(last_switch) >= Duration::new(6, 0) {
+                state = "night3start";
+                last_switch = now;
+            }
+        }
+
+
         if state == "night2lose" {
             let now = Instant::now();
             if now.duration_since(last_frame_update) >= frame_duration {
@@ -314,7 +296,7 @@ fn main() {
             framebuffer.draw_text("GAME OVER", window_width / 2 - 150, window_height / 2 + 200, 5);
             framebuffer.draw_text("PRESS R TO RESTART OR Q TO QUIT", window_width / 2 - 250, window_height / 2 + 240, 3);
         
-            framebuffer.draw_animated_image(&textures.chicaloss, frame_index, window_width, window_height - 100);
+            framebuffer.draw_animated_image(&textures.bonnieloss, frame_index, window_width, window_height - 100);
 
             window.update_with_buffer(&framebuffer.buffer, window_width, window_height).unwrap();
         
@@ -327,11 +309,83 @@ fn main() {
         }
 
         if state == "night3start" {
-            continue;
+            framebuffer.clear();
+            framebuffer.draw_text("NIGHT 3", window_width / 2 - 150, window_height / 2 - 50, 8);
+            window.update_with_buffer(&framebuffer.buffer, window_width, window_height).unwrap();
+            player3.pos = initial_pos3;
+
+            let now = Instant::now();
+            if now.duration_since(last_switch) >= Duration::new(3, 0) {
+                state = "night3";
+                last_switch = now;
+                start_time3 = Instant::now(); 
+            }
         }
 
         if state == "night3" {
-            // Lógica para la tercera noche
+            framebuffer.clear();
+
+            process_event(&mut player3,&window,&maze3,block_size);
+
+            render3d(&mut framebuffer, &player3, window_width, window_height, &maze3, &textures);
+            render_minimap(&mut framebuffer, &player3, &maze3, minimap_x, minimap_y, minimap_scale, window_width, window_height);
+            let now = Instant::now();
+            let frame_duration = now.duration_since(last_frame_time);
+            let fps = 1.0 / frame_duration.as_secs_f32();
+            last_frame_time = now;
+
+            framebuffer.draw_text(&format!("FPS: {:.0}", fps), 10, 10, 5);
+
+            let distance = calc_distance(&player3, block_size, &goal1);
+
+            let threshold = 2.0;
+
+            if distance <= threshold {
+                state = "night3clear";
+                last_switch = now;
+            }
+
+            if now.duration_since(start_time3) >= night3_duration {
+                state = "night3lose";
+                last_switch = now;
+            }
+        }
+
+        if state == "night3clear" {
+            framebuffer.clear();
+            framebuffer.draw_text("TOMMORROW IS", window_width / 2 - 250, window_height / 2 - 50, 4);
+            framebuffer.draw_text("ANOTHER DAY", window_width / 2 - 220, window_height / 2 - 15, 4);
+            window.update_with_buffer(&framebuffer.buffer, window_width, window_height).unwrap();
+
+            let now = Instant::now();
+            if now.duration_since(last_switch) >= Duration::new(6, 0) {
+                state = "main1";
+                last_switch = now;
+            }
+        }
+
+
+        if state == "night3lose" {
+            let now = Instant::now();
+            if now.duration_since(last_frame_update) >= frame_duration {
+                frame_index = (frame_index + 1) % &textures.chicaloss.frame_count;
+                last_frame_update = now;
+            }
+            
+            framebuffer.clear();
+            framebuffer.draw_text("GAME OVER", window_width / 2 - 150, window_height / 2 + 200, 5);
+            framebuffer.draw_text("PRESS R TO RESTART OR Q TO QUIT", window_width / 2 - 250, window_height / 2 + 240, 3);
+        
+            framebuffer.draw_animated_image(&textures.freddyloss, frame_index, window_width, window_height - 100);
+
+            window.update_with_buffer(&framebuffer.buffer, window_width, window_height).unwrap();
+        
+            if window.is_key_down(Key::R) {
+                state = "night3start";
+                start_time2 = Instant::now(); 
+            } else if window.is_key_down(Key::Q) {
+                state = "main1"; 
+            }
         }
 
         window.update_with_buffer(&framebuffer.buffer, window_width, window_height).unwrap();
@@ -363,6 +417,21 @@ fn rgb_to_u32(rgb: Rgb<u8>) -> u32 {
     0xFF000000 | (r << 16) | (g << 8) | b
 }
 
+
+fn calc_distance(player: &Player, block_size: usize, goal: &Vec<(usize, usize)>) -> f32{
+    let player_col = (player.pos.x / block_size as f32) as usize;
+    let player_row = (player.pos.y / block_size as f32) as usize;
+
+    let goal_col = goal[0].1;
+    let goal_row = goal[0].0;
+
+    let dist_x = (goal_col as f32 - player_col as f32).powi(2);
+    let dist_y = (goal_row as f32 - player_row as f32).powi(2);
+    let distance = (dist_x + dist_y).sqrt();
+
+    return 	distance;
+    
+}
 
 
 
