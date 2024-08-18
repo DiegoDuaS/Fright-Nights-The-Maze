@@ -1,3 +1,4 @@
+use audioplayer::AudioPlayer;
 use image::Rgb;
 use minifb::{Key, Window, WindowOptions};
 use std::time::{Duration, Instant};
@@ -57,6 +58,23 @@ fn main() {
     let night1_duration = Duration::new(20, 0);
     let night2_duration = Duration::new(20, 0); 
     let night3_duration = Duration::new(15, 0);
+    let audio_player_main = AudioPlayer::new("sound/mainmenu.mp3");
+    let audio_player_ambience = AudioPlayer::new("sound/ambience.mp3");
+    let audio_player_jumpscare1 = AudioPlayer::new("sound/jumpscare.mp3");
+    let audio_player_win1 = AudioPlayer::new("sound/win.mp3");
+    let audio_player_jumpscare2 = AudioPlayer::new("sound/jumpscare.mp3");
+    let audio_player_win2 = AudioPlayer::new("sound/win.mp3");
+    let audio_player_jumpscare3 = AudioPlayer::new("sound/jumpscare.mp3");
+    let audio_player_win3 = AudioPlayer::new("sound/win.mp3");
+
+    audio_player_ambience.stop();
+    audio_player_jumpscare1.stop();
+    audio_player_win1.stop();
+    audio_player_jumpscare2.stop();
+    audio_player_win2.stop();
+    audio_player_jumpscare3.stop();
+    audio_player_win3.stop();
+    
 
     // LABERINTO 1
     let maze_result1 = load_maze("./night1.txt");
@@ -134,6 +152,8 @@ fn main() {
         }
 
         if state == "main1" {
+            audio_player_main.play();
+            
             let now = Instant::now();
             if now.duration_since(last_switch) >= Duration::new(3, 0) {
                 current_screen = (current_screen + 1) % 2;
@@ -144,7 +164,7 @@ fn main() {
                 state = "night1start";
                 last_switch = now;
                 start_time1 = Instant::now(); 
-
+                audio_player_main.stop();
             }
         }
 
@@ -163,6 +183,7 @@ fn main() {
         }
 
         if state == "night1" {
+            audio_player_ambience.play();
             framebuffer.clear();
 
             process_event(&mut player1,&window,&maze1,block_size);
@@ -181,17 +202,20 @@ fn main() {
             let threshold = 2.0;
 
             if distance <= threshold {
+                audio_player_ambience.stop();
                 state = "night1clear";
                 last_switch = now;
             }
 
             if now.duration_since(start_time1) >= night1_duration {
+                audio_player_ambience.stop();
                 state = "night1lose";
                 last_switch = now;
             }
         }
 
         if state == "night1clear" {
+            audio_player_win1.play();
             framebuffer.clear();
             framebuffer.draw_text("I WAS THE FIRST", window_width / 2 - 250, window_height / 2 - 50, 4);
             framebuffer.draw_text("I HAVE SEEN EVERYTHING", window_width / 2 - 220, window_height / 2 - 15, 4);
@@ -199,12 +223,14 @@ fn main() {
 
             let now = Instant::now();
             if now.duration_since(last_switch) >= Duration::new(6, 0) {
+                audio_player_win1.stop();
                 state = "night2start";
                 last_switch = now;
             }
         }
 
         if state == "night1lose" {
+            audio_player_jumpscare1.play();
             let now = Instant::now();
             if now.duration_since(last_frame_update) >= frame_duration {
                 frame_index = (frame_index + 1) % &textures.chicaloss.frame_count;
@@ -220,9 +246,11 @@ fn main() {
             window.update_with_buffer(&framebuffer.buffer, window_width, window_height).unwrap();
         
             if window.is_key_down(Key::R) {
+                audio_player_jumpscare1.stop();
                 state = "night1start";
                 start_time1 = Instant::now(); 
             } else if window.is_key_down(Key::Q) {
+                audio_player_jumpscare1.stop();
                 state = "main1"; 
             }
         }
@@ -244,6 +272,7 @@ fn main() {
 
         if state == "night2" {
             framebuffer.clear();
+            audio_player_ambience.play();
 
             process_event(&mut player2,&window,&maze2,block_size);
 
@@ -261,17 +290,20 @@ fn main() {
             let threshold = 2.0;
 
             if distance <= threshold {
+                audio_player_ambience.stop();
                 state = "night2clear";
                 last_switch = now;
             }
 
             if now.duration_since(start_time2) >= night2_duration {
+                audio_player_ambience.stop();
                 state = "night2lose";
                 last_switch = now;
             }
         }
 
         if state == "night2clear" {
+            audio_player_win2.play();
             framebuffer.clear();
             framebuffer.draw_text("IS TIME TO FACE THE", window_width / 2 - 300, window_height / 2 - 50, 4);
             framebuffer.draw_text("CONSECUENCES OF YOUR FAILURE", window_width / 2 - 270, window_height / 2 - 15, 4);
@@ -279,6 +311,7 @@ fn main() {
 
             let now = Instant::now();
             if now.duration_since(last_switch) >= Duration::new(6, 0) {
+                audio_player_win2.stop();
                 state = "night3start";
                 last_switch = now;
             }
@@ -286,6 +319,7 @@ fn main() {
 
 
         if state == "night2lose" {
+            audio_player_jumpscare2.play();
             let now = Instant::now();
             if now.duration_since(last_frame_update) >= frame_duration {
                 frame_index = (frame_index + 1) % &textures.chicaloss.frame_count;
@@ -301,9 +335,11 @@ fn main() {
             window.update_with_buffer(&framebuffer.buffer, window_width, window_height).unwrap();
         
             if window.is_key_down(Key::R) {
+                audio_player_jumpscare2.stop();
                 state = "night2start";
                 start_time2 = Instant::now(); 
             } else if window.is_key_down(Key::Q) {
+                audio_player_jumpscare2.stop();
                 state = "main1"; 
             }
         }
@@ -323,6 +359,7 @@ fn main() {
         }
 
         if state == "night3" {
+            audio_player_ambience.play();
             framebuffer.clear();
 
             process_event(&mut player3,&window,&maze3,block_size);
@@ -341,17 +378,20 @@ fn main() {
             let threshold = 2.0;
 
             if distance <= threshold {
+                audio_player_ambience.stop();
                 state = "night3clear";
                 last_switch = now;
             }
 
             if now.duration_since(start_time3) >= night3_duration {
+                audio_player_ambience.stop();
                 state = "night3lose";
                 last_switch = now;
             }
         }
 
         if state == "night3clear" {
+            audio_player_win3.play();
             framebuffer.clear();
             framebuffer.draw_text("TOMMORROW IS", window_width / 2 - 250, window_height / 2 - 50, 4);
             framebuffer.draw_text("ANOTHER DAY", window_width / 2 - 220, window_height / 2 - 15, 4);
@@ -359,6 +399,7 @@ fn main() {
 
             let now = Instant::now();
             if now.duration_since(last_switch) >= Duration::new(6, 0) {
+                audio_player_win3.stop();
                 state = "main1";
                 last_switch = now;
             }
@@ -366,6 +407,7 @@ fn main() {
 
 
         if state == "night3lose" {
+            audio_player_jumpscare3.play();
             let now = Instant::now();
             if now.duration_since(last_frame_update) >= frame_duration {
                 frame_index = (frame_index + 1) % &textures.chicaloss.frame_count;
@@ -381,9 +423,11 @@ fn main() {
             window.update_with_buffer(&framebuffer.buffer, window_width, window_height).unwrap();
         
             if window.is_key_down(Key::R) {
+                audio_player_jumpscare3.stop();
                 state = "night3start";
                 start_time2 = Instant::now(); 
             } else if window.is_key_down(Key::Q) {
+                audio_player_jumpscare3.stop();
                 state = "main1"; 
             }
         }
